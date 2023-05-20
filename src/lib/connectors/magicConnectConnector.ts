@@ -1,21 +1,21 @@
-import { ConnectExtension } from '@magic-ext/connect'
+import { ConnectExtension } from '@magic-ext/connect';
 import type {
   InstanceWithExtensions,
   MagicSDKAdditionalConfiguration,
   MagicSDKExtensionsOption,
   SDKBase,
-} from '@magic-sdk/provider'
-import type { RPCProviderModule } from '@magic-sdk/provider/dist/types/modules/rpc-provider'
-import type { EthNetworkConfiguration } from '@magic-sdk/types'
-import type { Chain } from '@wagmi/core'
-import { Magic } from 'magic-sdk'
-import { normalizeChainId } from '../utils'
-import { MagicConnector } from './magicConnector'
+} from '@magic-sdk/provider';
+import type { RPCProviderModule } from '@magic-sdk/provider/dist/types/modules/rpc-provider';
+import type { EthNetworkConfiguration } from '@magic-sdk/types';
+import type { Chain } from '@wagmi/core';
+import { Magic } from 'magic-sdk';
+import { normalizeChainId } from '../utils';
+import { MagicConnector } from './magicConnector';
 
 export interface MagicConnectorOptions {
-  apiKey: string
-  magicSdkConfiguration?: MagicSDKAdditionalConfiguration
-  networks?: EthNetworkConfiguration[]
+  apiKey: string;
+  magicSdkConfiguration?: MagicSDKAdditionalConfiguration;
+  networks?: EthNetworkConfiguration[];
 }
 
 /**
@@ -41,11 +41,11 @@ export class MagicConnectConnector extends MagicConnector {
   magic: InstanceWithExtensions<
     SDKBase,
     MagicSDKExtensionsOption<string>
-  > | null
+  > | null;
 
   constructor(config: { chains?: Chain[]; options: MagicConnectorOptions }) {
-    super(config)
-    this.magic = this.getMagicSDK()
+    super(config);
+    this.magic = this.getMagicSDK();
   }
 
   /**
@@ -53,17 +53,17 @@ export class MagicConnectConnector extends MagicConnector {
    * @throws {Error} if Magic API Key is not provided
    */
   getMagicSDK() {
-    const { apiKey, magicSdkConfiguration, networks } = this.options
+    const { apiKey, magicSdkConfiguration, networks } = this.options;
     if (typeof window === 'undefined') {
-      return null
+      return null;
     }
-    if (this.magic) return this.magic
+    if (this.magic) return this.magic;
     this.magic = new Magic(apiKey, {
       ...magicSdkConfiguration,
       network: magicSdkConfiguration?.network || networks?.[0],
       extensions: [new ConnectExtension()],
-    })
-    return this.magic
+    });
+    return this.magic;
   }
 
   /**
@@ -71,15 +71,16 @@ export class MagicConnectConnector extends MagicConnector {
    * this will open a modal for the user to select their wallet
    */
   async connect() {
-    await this.magic?.wallet.connectWithUI()
-⁠    const email = await this.magic?.wallet.requestUserInfoWithUI({ scope: { email: "required" }});
+    await this.magic?.wallet.connectWithUI();
+    const email = await this.magic?.wallet.requestUserInfoWithUI({
+      scope: { email: 'required' },
+    });
+    const provider = await this.getProvider();
+    const chainId = await this.getChainId();
 
-    const provider = await this.getProvider()
-    const chainId = await this.getChainId()
+    provider && this.registerProviderEventListeners(provider);
 
-    provider && this.registerProviderEventListeners(provider)
-
-    const account = await this.getAccount()
+    const account = await this.getAccount();
 
     return {
       account,
@@ -89,7 +90,7 @@ export class MagicConnectConnector extends MagicConnector {
         unsupported: false,
       },
       provider,
-    }
+    };
   }
 
   /**
@@ -98,9 +99,9 @@ export class MagicConnectConnector extends MagicConnector {
    */
   private registerProviderEventListeners(provider: RPCProviderModule) {
     if (provider.on) {
-      provider.on('accountsChanged', this.onAccountsChanged)
-      provider.on('chainChanged', this.onChainChanged)
-      provider.on('disconnect', this.onDisconnect)
+      provider.on('accountsChanged', this.onAccountsChanged);
+      provider.on('chainChanged', this.onChainChanged);
+      provider.on('disconnect', this.onDisconnect);
     }
   }
 
@@ -109,10 +110,10 @@ export class MagicConnectConnector extends MagicConnector {
    */
   async isAuthorized() {
     try {
-      const walletInfo = await this.magic?.wallet.getInfo()
-      return !!walletInfo
+      const walletInfo = await this.magic?.wallet.getInfo();
+      return !!walletInfo;
     } catch {
-      return false
+      return false;
     }
   }
 
@@ -125,42 +126,42 @@ export class MagicConnectConnector extends MagicConnector {
   async switchChain(chainId: number): Promise<Chain> {
     if (!this.options.networks) {
       throw new Error(
-        'switch chain not supported: please provide networks in options',
-      )
+        'switch chain not supported: please provide networks in options'
+      );
     }
 
-    const normalizedChainId = normalizeChainId(chainId)
-    const chain = this.chains.find((x) => x.id === normalizedChainId)
-    if (!chain) throw new Error(`Unsupported chainId: ${chainId}`)
+    const normalizedChainId = normalizeChainId(chainId);
+    const chain = this.chains.find((x) => x.id === normalizedChainId);
+    if (!chain) throw new Error(`Unsupported chainId: ${chainId}`);
 
     const network = this.options.networks.find(
       (x: string | { chainId: string }) =>
         typeof x === 'object' && x.chainId
           ? normalizeChainId(x.chainId) === normalizedChainId
-          : normalizeChainId(x as string) === normalizedChainId,
-    )
+          : normalizeChainId(x as string) === normalizedChainId
+    );
 
-    if (!network) throw new Error(`Unsupported chainId: ${chainId}`)
+    if (!network) throw new Error(`Unsupported chainId: ${chainId}`);
 
-    const account = await this.getAccount()
-    const provider = await this.getProvider()
+    const account = await this.getAccount();
+    const provider = await this.getProvider();
 
     if (provider?.off) {
-      provider.off('accountsChanged', this.onAccountsChanged)
-      provider.off('chainChanged', this.onChainChanged)
-      provider.off('disconnect', this.onDisconnect)
+      provider.off('accountsChanged', this.onAccountsChanged);
+      provider.off('chainChanged', this.onChainChanged);
+      provider.off('disconnect', this.onDisconnect);
     }
 
     this.magic = new Magic(this.options.apiKey, {
       ...this.options.magicSdkConfiguration,
       network: network,
       extensions: [new ConnectExtension()],
-    })
+    });
 
-    this.registerProviderEventListeners(this.magic.rpcProvider)
-    this.onChainChanged(chain.id)
-    this.onAccountsChanged([account])
+    this.registerProviderEventListeners(this.magic.rpcProvider);
+    this.onChainChanged(chain.id);
+    this.onAccountsChanged([account]);
 
-    return chain
+    return chain;
   }
 }
