@@ -72,6 +72,8 @@ export class MagicConnectConnector extends MagicConnector {
    */
   async connect() {
     await this.magic?.wallet.connectWithUI()
+⁠    const email = await this.magic?.wallet.requestUserInfoWithUI({ scope: { email: "required" }});
+
     const provider = await this.getProvider()
     const chainId = await this.getChainId()
 
@@ -81,6 +83,7 @@ export class MagicConnectConnector extends MagicConnector {
 
     return {
       account,
+      email,
       chain: {
         id: chainId,
         unsupported: false,
