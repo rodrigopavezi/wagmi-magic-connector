@@ -63,7 +63,7 @@ export abstract class MagicConnector extends Connector {
 
   async getProvider() {
     const magic = this.getMagicSDK()
-    return magic?.rpcProvider
+    return magic?.wallet.getProvider()
   }
 
   protected onAccountsChanged(accounts: string[]): void {
